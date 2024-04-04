@@ -290,7 +290,7 @@ func TestValidate(t *testing.T) {
 						field: "MinB",
 					},
 					{
-						err:   ErrMinValidationFailed,
+						err:   ErrInvalidValidatorSyntax,
 						field: "MinC",
 					},
 					{
