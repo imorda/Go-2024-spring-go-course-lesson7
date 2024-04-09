@@ -39,14 +39,7 @@ func (e *ValidationError) Unwrap() error {
 	return e.err
 }
 
-type Validator[t any, k any] struct {
-	value    t
-	template k
-	outcome  error
-}
-
 func validateString(str, validator, template string) error {
-
 	if validator == "len" {
 		expected, err := strconv.Atoi(template)
 		if err != nil {
