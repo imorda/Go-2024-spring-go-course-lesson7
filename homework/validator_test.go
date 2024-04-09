@@ -271,7 +271,7 @@ func TestValidate(t *testing.T) {
 						field: "InC",
 					},
 					{
-						err:   ErrInValidationFailed,
+						err:   ErrInvalidValidatorSyntax,
 						field: "InD",
 					},
 					{

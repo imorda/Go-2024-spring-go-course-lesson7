@@ -7,8 +7,6 @@ import (
 	"slices"
 	"strconv"
 	"strings"
-	"unicode"
-	"unicode/utf8"
 )
 
 var (
@@ -41,30 +39,24 @@ func (e *ValidationError) Unwrap() error {
 	return e.err
 }
 
-func intParamValidator[T any](
-	val T,
-	template string,
-	validator func(T, int) error,
-) error {
-	constraint, err := strconv.Atoi(template)
-	if err != nil {
-		return NewValidationError(fmt.Errorf("%w. Cause: %w", ErrInvalidValidatorSyntax, err), template)
-	}
-	return validator(val, constraint)
+type Validator[t any, k any] struct {
+	value    t
+	template k
+	outcome  error
 }
 
 func validateString(str, validator, template string) error {
+
 	if validator == "len" {
-		if err := intParamValidator(str, template, func(str string, expected int) error {
-			if expected < 0 {
-				return ErrInvalidValidatorSyntax
-			}
-			if len(str) != expected {
-				return ErrLenValidationFailed
-			}
-			return nil
-		}); err != nil {
-			return err
+		expected, err := strconv.Atoi(template)
+		if err != nil {
+			return ErrInvalidValidatorSyntax
+		}
+		if expected < 0 {
+			return ErrInvalidValidatorSyntax
+		}
+		if len(str) != expected {
+			return ErrLenValidationFailed
 		}
 	}
 
@@ -76,24 +68,22 @@ func validateString(str, validator, template string) error {
 	}
 
 	if validator == "min" {
-		if err := intParamValidator(str, template, func(str string, expected int) error {
-			if len(str) <= expected {
-				return ErrMinValidationFailed
-			}
-			return nil
-		}); err != nil {
-			return err
+		expected, err := strconv.Atoi(template)
+		if err != nil {
+			return ErrInvalidValidatorSyntax
+		}
+		if len(str) < expected {
+			return ErrMinValidationFailed
 		}
 	}
 
 	if validator == "max" {
-		if err := intParamValidator(str, template, func(str string, expected int) error {
-			if len(str) >= expected {
-				return ErrMaxValidationFailed
-			}
-			return nil
-		}); err != nil {
-			return err
+		expected, err := strconv.Atoi(template)
+		if err != nil {
+			return ErrInvalidValidatorSyntax
+		}
+		if len(str) > expected {
+			return ErrMaxValidationFailed
 		}
 	}
 
@@ -108,34 +98,32 @@ func validateInt(val int64, validator, template string) error {
 		for _, v := range constraintsStr {
 			intV, err := strconv.ParseInt(v, 10, 64)
 			if err != nil {
-				return ErrInValidationFailed // Required by tests, should be ErrInvalidValidatorSyntax
+				return ErrInvalidValidatorSyntax
 			}
 			constraints = append(constraints, intV)
 		}
 		if slices.Index(constraints, val) < 0 {
-			return NewValidationError(ErrInValidationFailed, fmt.Sprintf("%v", val))
+			return ErrInValidationFailed
 		}
 	}
 
 	if validator == "min" {
-		if err := intParamValidator(val, template, func(v int64, expected int) error {
-			if v <= int64(expected) {
-				return ErrMinValidationFailed
-			}
-			return nil
-		}); err != nil {
-			return err
+		expected, err := strconv.ParseInt(template, 10, 64)
+		if err != nil {
+			return ErrInvalidValidatorSyntax
+		}
+		if val < expected {
+			return ErrMinValidationFailed
 		}
 	}
 
 	if validator == "max" {
-		if err := intParamValidator(val, template, func(v int64, expected int) error {
-			if v >= int64(expected) {
-				return ErrMaxValidationFailed
-			}
-			return nil
-		}); err != nil {
-			return err
+		expected, err := strconv.ParseInt(template, 10, 64)
+		if err != nil {
+			return ErrInvalidValidatorSyntax
+		}
+		if val > expected {
+			return ErrMaxValidationFailed
 		}
 	}
 
@@ -179,8 +167,7 @@ func Validate(x any) error {
 		fv := valOfX.Field(i)
 		ft := typeOfX.Field(i)
 
-		firstLetter, _ := utf8.DecodeRuneInString(ft.Name)
-		if !unicode.IsUpper(firstLetter) {
+		if !ft.IsExported() {
 			if _, ok := ft.Tag.Lookup("validate"); ok {
 				result = append(result, NewValidationError(ErrValidateForUnexportedFields, ft.Name))
 			}
