@@ -123,6 +123,51 @@ func TestValidate(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "valid struct with tagged fields",
+			args: args{
+				v: struct {
+					Len   string `validate:"len:20"`
+					LenZ  string `validate:"len:0"`
+					InInt int    `validate:"in:20,25,30"`
+					InNeg int    `validate:"in:-20,-25,-30"`
+					InStr string `validate:"in:foo,bar"`
+					w     struct {
+						MinInt    int    `validate:"min:10"`
+						MinIntNeg int    `validate:"min:-10"`
+						MinStr    string `validate:"min:10"`
+						MinStrNeg string `validate:"min:-1"`
+						MaxInt    int    `validate:"max:20"`
+						MaxIntNeg int    `validate:"max:-2"`
+						MaxStr    string `validate:"max:20"`
+					}
+				}{
+					Len:   "abcdefghjklmopqrstvu",
+					LenZ:  "",
+					InInt: 25,
+					InNeg: -25,
+					InStr: "bar",
+					w: struct {
+						MinInt    int    `validate:"min:10"`
+						MinIntNeg int    `validate:"min:-10"`
+						MinStr    string `validate:"min:10"`
+						MinStrNeg string `validate:"min:-1"`
+						MaxInt    int    `validate:"max:20"`
+						MaxIntNeg int    `validate:"max:-2"`
+						MaxStr    string `validate:"max:20"`
+					}{
+						MinInt:    15,
+						MinIntNeg: -9,
+						MinStr:    "abcdefghjkl",
+						MinStrNeg: "abc",
+						MaxInt:    16,
+						MaxIntNeg: -3,
+						MaxStr:    "abcdefghjklmopqrst",
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
 			name: "wrong length",
 			args: args{
 				v: struct {
